@@ -70,12 +70,39 @@ npm run e2e  # prawdziwe okno Electron sterowane automatycznie, ze zrzutami ekra
 Testy używają `test/mock-openfortivpn.js`, który mówi tym samym protokołem
 pinentry co prawdziwy openfortivpn — nie potrzeba sudo ani sieci.
 
-## Paczki
+## Instalacja na macOS (dla pobierających)
+
+Plik `openfortivpn-Connect-<wersja>-mac-universal.dmg` działa na każdym Macu
+z macOS 11 lub nowszym (Apple Silicon i Intel) i **nie wymaga Homebrew ani
+żadnych bibliotek** — openfortivpn z wkompilowanym OpenSSL jest w środku.
+
+1. Otwórz `.dmg` i przeciągnij **openfortivpn Connect** do **Aplikacji**.
+2. Przy pierwszym uruchomieniu macOS pokaże, że nie może zweryfikować
+   dewelopera (aplikacja ma podpis ad-hoc, nie certyfikat Apple):
+   - kliknij **Gotowe**, wejdź w **Ustawienia systemowe → Prywatność
+     i ochrona**, przewiń w dół i kliknij **Otwórz mimo to**,
+   - albo w Terminalu: `xattr -dr com.apple.quarantine "/Applications/openfortivpn Connect.app"`
+3. Kolejne uruchomienia działają normalnie.
+
+## Budowanie paczek
 
 ```bash
-npm run dist:mac     # .dmg / .zip
+npm run dist:mac     # uniwersalny .dmg/.zip (arm64 + x86_64), podpis ad-hoc
 npm run dist:linux   # .deb / AppImage (uruchom na Linuksie)
 ```
 
+`dist:mac` najpierw buduje `vendor/openfortivpn` skryptem
+`scripts/build-openfortivpn-macos.sh`: pobiera OpenSSL 3.5 LTS (z weryfikacją
+sumy SHA-256), kompiluje go statycznie dla obu architektur i łączy z
+openfortivpn z tego repozytorium (`lipo`). Wynik zależy wyłącznie od
+bibliotek systemowych macOS. Wymagane: Xcode Command Line Tools, `autoconf`,
+`automake`, `pkg-config` (`brew install autoconf automake pkg-config`).
+Przebudowa binarki: `REBUILD_OPENFORTIVPN=1 npm run dist:mac`.
+
+Żeby macOS nie pokazywał ostrzeżenia przy instalacji, aplikację trzeba podpisać
+certyfikatem **Developer ID** i notaryzować (konto Apple Developer, 99 USD/rok)
+— wtedy wystarczy ustawić `CSC_LINK`/`CSC_KEY_PASSWORD` oraz dane notaryzacji
+przed `npm run dist:mac` i usunąć `identity: null` z `package.json`.
+
 Uwaga: na woluminie FAT32/exFAT (np. `/Volumes/DANE`) macOS tworzy pliki `._*`,
-które psują budowanie paczki — buduj z kopii na dysku APFS.
+które psują budowanie — skrypty same budują w kopii na dysku APFS.

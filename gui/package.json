@@ -28,7 +28,8 @@
       "helper/**",
       "assets/**",
       "package.json",
-      "!**/._*"
+      "!**/._*",
+      "!scripts/**"
     ],
     "asarUnpack": [
       "helper/**"
@@ -40,9 +41,24 @@
       "category": "public.app-category.utilities",
       "icon": "assets/icon.png",
       "target": [
-        "dmg",
-        "zip"
-      ]
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "minimumSystemVersion": "11.0",
+      "x64ArchFiles": "Contents/Resources/bin/openfortivpn",
+      "artifactName": "openfortivpn-Connect-${version}-mac-universal.${ext}"
     },
     "linux": {
       "category": "Network",
@@ -71,6 +87,11 @@
           "openfortivpn"
         ]
       }
-    ]
+    ],
+    "dmg": {
+      "title": "openfortivpn Connect",
+      "artifactName": "openfortivpn-Connect-${version}-mac-universal.${ext}"
+    },
+    "afterPack": "scripts/adhoc-sign.js"
   }
 }

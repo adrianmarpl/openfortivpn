@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
-# Builds openfortivpn Connect.app (+ .dmg/.zip) with the patched openfortivpn
-# from this repository bundled in Contents/Resources/bin.
+# Builds a distributable, universal (Apple Silicon + Intel) openfortivpn Connect
+# .dmg/.zip. The bundled openfortivpn has OpenSSL linked statically, so the app
+# needs nothing besides macOS 11+ (no Homebrew).
 #
 # electron-builder breaks on FAT32/exFAT volumes (macOS AppleDouble "._*"
 # files), so the build runs in a temporary copy on the system APFS disk.
 set -euo pipefail
 GUI="$(cd "$(dirname "$0")/.." && pwd)"
-REPO="$(cd "$GUI/.." && pwd)"
-BIN="$REPO/openfortivpn"
-if [ ! -x "$BIN" ]; then
-	echo "Brak $BIN - zbuduj najpierw openfortivpn:"
-	echo "  cd $REPO && ./autogen.sh && PKG_CONFIG_PATH=/opt/homebrew/opt/openssl@4/lib/pkgconfig ./configure --prefix=/opt/homebrew --sysconfdir=/opt/homebrew/etc && make"
+BIN="$GUI/vendor/openfortivpn"
+
+if [ ! -x "$BIN" ] || [ "${REBUILD_OPENFORTIVPN:-0}" = 1 ]; then
+	"$GUI/scripts/build-openfortivpn-macos.sh"
+fi
+if otool -L "$BIN" | grep -qE '/opt/homebrew|libssl|libcrypto'; then
+	echo "vendor/openfortivpn depends on external libraries - run scripts/build-openfortivpn-macos.sh" >&2
 	exit 1
 fi
+
 WORK="$(mktemp -d /tmp/ofvgui-build.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
-rsync -a --exclude '._*' --exclude '/dist' --exclude '/vendor' "$GUI/" "$WORK/"
-mkdir -p "$WORK/vendor"
-cp "$BIN" "$WORK/vendor/openfortivpn"
-chmod 755 "$WORK/vendor/openfortivpn"
-(cd "$WORK" && CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dmg zip)
+rsync -a --exclude '._*' --exclude '/dist' "$GUI/" "$WORK/"
+(cd "$WORK" && npx electron-builder --mac --universal)
+
 mkdir -p "$GUI/dist"
-rm -rf "$GUI/dist/mac-arm64" "$GUI/dist/"*.dmg "$GUI/dist/"*.zip
-cp -R "$WORK/dist/mac-arm64" "$WORK/dist/"*.dmg "$WORK/dist/"*.zip "$GUI/dist/" 2>/dev/null || true
+rm -f "$GUI/dist/"*.dmg "$GUI/dist/"*.zip "$GUI/dist/"*.blockmap
+cp "$WORK/dist/"*.dmg "$WORK/dist/"*.zip "$GUI/dist/"
 find "$GUI/dist" -name '._*' -delete 2>/dev/null || true
-echo "Gotowe: $GUI/dist"
-ls -la "$GUI/dist"
+echo "Gotowe:"
+ls -la "$GUI/dist/"*.dmg "$GUI/dist/"*.zip
