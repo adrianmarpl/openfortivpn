@@ -762,7 +762,7 @@ async function openSettings() {
 		${choices('privilege', s.privilege, opts)}
 		<div style="margin-top:14px">
 			${chk('rememberAdminPassword', s.rememberAdminPassword && s.secureStorage, 'Zapamiętaj hasło administratora', s.secureStorage ? 'Zaszyfrowane w magazynie kluczy systemu.' : 'Magazyn kluczy niedostępny.')}
-			${chk('closeToTray', s.closeToTray, 'Zamknięcie okna chowa aplikację do zasobnika', 'Połączenie pozostaje aktywne; ikona w pasku menu / zasobniku.')}
+			${chk('closeToTray', s.closeToTray, S.app.platform === 'darwin' ? 'Zamknięcie okna chowa aplikację do paska menu' : 'Zamknięcie okna chowa aplikację do zasobnika', S.app.platform === 'darwin' ? 'Aplikacja znika z Docka i działa dalej jako ikona w pasku menu (połączenie pozostaje aktywne). Zakończ ją z menu ikony lub ⌘Q.' : 'Połączenie pozostaje aktywne; zakończ aplikację z menu ikony w zasobniku.')}
 			${chk('notifications', s.notifications, 'Powiadomienia systemowe', 'O połączeniu, rozłączeniu i prośbie o kod 2FA.')}
 		</div>
 		<div class="m-actions"><button class="btn" data-x="no">Anuluj</button><button class="btn primary" data-x="yes">Zapisz</button></div>`, {

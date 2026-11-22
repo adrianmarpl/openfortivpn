@@ -83,8 +83,9 @@ function createWindow() {
 	win.webContents.on('will-navigate', (e) => e.preventDefault());
 	win.on('close', (e) => {
 		if (quitting) return;
-		const active = session && ['connecting', 'connected', 'disconnecting'].includes(status.state);
-		if (store.getSettings().closeToTray && tray && (active || process.platform !== 'darwin')) {
+		// closing the window keeps the app running in the menu bar / tray only
+		// (macOS: also removed from the Dock); quit from the tray menu or Cmd+Q
+		if (store.getSettings().closeToTray && tray) {
 			e.preventDefault();
 			win.hide();
 			if (process.platform === 'darwin') app.dock?.hide();
