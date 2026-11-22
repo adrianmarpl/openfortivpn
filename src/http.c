@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /*
  * Fixed size of the buffer for outgoing HTTP requests.
@@ -108,9 +109,18 @@ int http_send(struct tunnel *tunnel, const char *request, ...)
 
 	log_debug_details("%s:\n%s\n", __func__, logbuffer);
 
-	while (n == 0)
-		n = safe_ssl_write(tunnel->ssl_handle, (uint8_t *) buffer,
-		                   length);
+	{
+		time_t start = time(NULL);
+
+		while (n == 0) {
+			n = safe_ssl_write(tunnel->ssl_handle, (uint8_t *) buffer,
+			                   length);
+			if (n == 0 && time(NULL) - start >= SETUP_IO_TIMEOUT) {
+				log_warn("Timed out sending to the gateway.\n");
+				return ERR_HTTP_TLS;
+			}
+		}
+	}
 	if (n < 0) {
 		log_debug("Error writing to TLS connection (%s).\n",
 		          err_ssl_str(n));
@@ -167,10 +177,18 @@ int http_receive(struct tunnel *tunnel,
 	while (1) {
 		int n;
 
+		time_t start = time(NULL);
+
 		while ((n = safe_ssl_read(tunnel->ssl_handle,
 		                          (uint8_t *) buffer + bytes_read,
-		                          capacity - bytes_read)) == ERR_TLS_AGAIN)
-			;
+		                          capacity - bytes_read)) == ERR_TLS_AGAIN) {
+			if (time(NULL) - start >= SETUP_IO_TIMEOUT) {
+				log_warn("Gateway did not answer within %d s.\n",
+				         SETUP_IO_TIMEOUT);
+				free(buffer);
+				return ERR_HTTP_TLS;
+			}
+		}
 		if (n < 0) {
 			log_debug("Error reading from TLS connection (%s).\n",
 			          err_ssl_str(n));
@@ -316,8 +334,11 @@ static int http_request(struct tunnel *tunnel, const char *method,
 
 	ret = do_http_request(tunnel, method, uri, data,
 	                      response, response_size);
-	if (ret == ERR_HTTP_TLS) {
-		ssl_connect(tunnel);
+	for (int attempt = 1; ret == ERR_HTTP_TLS && attempt <= 3; attempt++) {
+		log_warn("Connection to the gateway stalled or closed, reconnecting (%d/3)...\n",
+		         attempt);
+		if (ssl_connect(tunnel))
+			break;
 		ret = do_http_request(tunnel, method, uri, data,
 		                      response, response_size);
 	}

@@ -86,6 +86,15 @@ int ppp_interface_is_up(struct tunnel *tunnel);
 
 int ssl_connect(struct tunnel *tunnel);
 
+/*
+ * Some gateways (or something on the path) occasionally stop answering a
+ * TLS connection during login. Bound every blocking read/write of the setup
+ * phase so a stalled connection fails and is re-established instead of
+ * hanging forever. Cleared before switching to tunneling mode.
+ */
+#define SETUP_IO_TIMEOUT 10
+void tunnel_set_io_timeout(struct tunnel *tunnel, int seconds);
+
 int run_tunnel(struct vpn_config *config);
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))

@@ -993,14 +993,29 @@ static int pem_passphrase_cb(char *buf, int size, int rwflag, void *u)
 	return -1;
 }
 
+void tunnel_set_io_timeout(struct tunnel *tunnel, int seconds)
+{
+	struct timeval tv = { .tv_sec = seconds, .tv_usec = 0 };
+
+	if (tunnel->ssl_socket < 0)
+		return;
+	if (setsockopt(tunnel->ssl_socket, SOL_SOCKET, SO_RCVTIMEO,
+	               &tv, sizeof(tv)) ||
+	    setsockopt(tunnel->ssl_socket, SOL_SOCKET, SO_SNDTIMEO,
+	               &tv, sizeof(tv)))
+		log_warn("Could not set socket timeout (%s).\n", strerror(errno));
+}
+
 /*
  * Connects to the gateway and initiate a TLS session.
  */
-int ssl_connect(struct tunnel *tunnel)
+static int ssl_connect_once(struct tunnel *tunnel)
 {
 	ssl_disconnect(tunnel);
 
 	tunnel->ssl_socket = tcp_connect(tunnel);
+	if (tunnel->ssl_socket != -1)
+		tunnel_set_io_timeout(tunnel, SETUP_IO_TIMEOUT);
 	if (tunnel->ssl_socket == -1)
 		goto err_tcp_connect;
 
@@ -1289,6 +1304,27 @@ int ssl_connect(struct tunnel *tunnel)
 		}
 	}
 
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+	/*
+	 * OpenSSL 3.5+ offers the hybrid group X25519MLKEM768 first.
+	 * FortiGate often stalls that handshake until ETIMEDOUT, which
+	 * openfortivpn reports as "SSL_connect: error:00000000".
+	 * Classical groups still negotiate TLS 1.3 and complete reliably.
+	 */
+	{
+		const char *groups = "X25519:secp256r1:secp384r1";
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+		if (!SSL_CTX_set1_groups_list(tunnel->ssl_context, groups))
+#else
+		if (!SSL_CTX_set1_curves_list(tunnel->ssl_context, groups))
+#endif
+			log_warn("Could not restrict TLS key exchange groups: %s\n",
+			         ERR_error_string(ERR_peek_last_error(), NULL));
+		else
+			log_debug("TLS groups: %s\n", groups);
+	}
+#endif
+
 	tunnel->ssl_handle = SSL_new(tunnel->ssl_context);
 	if (tunnel->ssl_handle == NULL) {
 		log_error("SSL_new: %s\n",
@@ -1315,11 +1351,19 @@ int ssl_connect(struct tunnel *tunnel)
 		log_debug("Set SNI for TLS handshake: %s\n", sni);
 
 	// Initiate SSL handshake
-	if (SSL_connect(tunnel->ssl_handle) != 1) {
-		log_error("SSL_connect: %s\n"
-		          "You might want to try --insecure-ssl or specify a different --cipher-list\n",
-		          ERR_error_string(ERR_peek_last_error(), NULL));
-		goto err_ssl_handle;
+	{
+		int ssl_ret = SSL_connect(tunnel->ssl_handle);
+
+		if (ssl_ret != 1) {
+			int saved_errno = errno;
+			int ssl_err = SSL_get_error(tunnel->ssl_handle, ssl_ret);
+
+			log_error("SSL_connect: %s (ssl_error=%d, errno=%d %s)\n"
+			          "You might want to try --insecure-ssl or specify a different --cipher-list\n",
+			          ERR_error_string(ERR_peek_last_error(), NULL),
+			          ssl_err, saved_errno, strerror(saved_errno));
+			goto err_ssl_handle;
+		}
 	}
 	SSL_set_mode(tunnel->ssl_handle, SSL_MODE_AUTO_RETRY);
 
@@ -1345,6 +1389,23 @@ err_ssl_socket:
 	tunnel->ssl_socket = -1;
 err_tcp_connect:
 	return 1;
+}
+
+int ssl_connect(struct tunnel *tunnel)
+{
+	int ret = 1;
+
+	for (int attempt = 1; attempt <= 3; attempt++) {
+		ret = ssl_connect_once(tunnel);
+		if (ret == 0)
+			return 0;
+		if (attempt < 3) {
+			log_warn("TLS connection failed, retrying (%d/3)...\n",
+			         attempt + 1);
+			sleep(1);
+		}
+	}
+	return ret;
 }
 
 int run_tunnel(struct vpn_config *config)
@@ -1422,6 +1483,7 @@ int run_tunnel(struct vpn_config *config)
 
 	// Step 5: ask gateway to start tunneling
 	log_debug("Switch to tunneling mode\n");
+	tunnel_set_io_timeout(&tunnel, 0);
 	ret = http_send(&tunnel,
 	                "GET /remote/sslvpn-tunnel HTTP/1.1\r\n"
 	                "Host: sslvpn\r\n"
