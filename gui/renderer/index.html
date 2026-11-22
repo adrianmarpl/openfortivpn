@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+	<title>openfortivpn Connect</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<div class="app">
+		<aside class="sidebar">
+			<div class="brand drag">
+				<div class="brand-mark" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path class="brand-key" d="M9.5 11.5a2.5 2.5 0 1 1 4.6 1.4l2.4 2.4-1.2 1.2-.8-.8-.8.8-1.1-1.1.8-.8-.5-.5a2.5 2.5 0 0 1-3.4-2.6Z"/></svg>
+				</div>
+				<div>
+					<div class="brand-name">openfortivpn</div>
+					<div class="brand-sub">Connect</div>
+				</div>
+			</div>
+
+			<div class="sidebar-section-title">
+				<span>Profile</span>
+				<button class="icon-btn" id="btn-new" title="Nowy profil" aria-label="Nowy profil">
+					<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+				</button>
+			</div>
+			<nav class="profile-list" id="profile-list" aria-label="Profile VPN"></nav>
+
+			<div class="sidebar-footer">
+				<button class="side-btn" id="btn-import">
+					<svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+					Importuj
+				</button>
+				<button class="side-btn" id="btn-diag">
+					<svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+					Diagnostyka
+				</button>
+				<button class="side-btn" id="btn-settings">
+					<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+					Ustawienia
+				</button>
+			</div>
+		</aside>
+
+		<main class="main" id="main"></main>
+	</div>
+
+	<div class="modal-root" id="modal-root"></div>
+	<div class="toast-root" id="toast-root" aria-live="polite"></div>
+
+	<script src="app.js"></script>
+</body>
+</html>

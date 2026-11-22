@@ -1,0 +1,76 @@
+{
+  "name": "openfortivpn-connect",
+  "productName": "openfortivpn Connect",
+  "version": "2.0.0",
+  "description": "Desktop GUI for openfortivpn (macOS, Ubuntu, Debian) with profiles, 2FA/token prompts and certificate pinning",
+  "main": "main/main.js",
+  "author": "openfortivpn contributors",
+  "license": "GPL-3.0",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "icons": "python3 scripts/make-icons.py",
+    "dist:mac": "bash scripts/build-mac.sh",
+    "dist:linux": "electron-builder --linux deb AppImage",
+    "e2e": "bash scripts/e2e.sh"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "org.openfortivpn.connect",
+    "productName": "openfortivpn Connect",
+    "files": [
+      "main/**",
+      "renderer/**",
+      "helper/**",
+      "assets/**",
+      "package.json",
+      "!**/._*"
+    ],
+    "asarUnpack": [
+      "helper/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "category": "Network",
+      "icon": "assets/icon.png",
+      "maintainer": "openfortivpn contributors <openfortivpn@users.noreply.github.com>",
+      "synopsis": "GUI for openfortivpn",
+      "target": [
+        "deb",
+        "AppImage"
+      ]
+    },
+    "deb": {
+      "depends": [
+        "openfortivpn",
+        "perl",
+        "pkexec | policykit-1",
+        "libnotify4",
+        "libsecret-1-0"
+      ]
+    },
+    "extraResources": [
+      {
+        "from": "vendor/",
+        "to": "bin/",
+        "filter": [
+          "openfortivpn"
+        ]
+      }
+    ]
+  }
+}
